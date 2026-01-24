@@ -11,6 +11,7 @@ mod storage;
 mod email;
 mod validation;
 mod utils;
+mod routing;
 
 use std::net::SocketAddr;
 use std::sync::Arc;

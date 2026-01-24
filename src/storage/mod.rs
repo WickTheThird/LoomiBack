@@ -5,7 +5,7 @@ pub struct MemoryStorage;
 
 #[async_trait::async_trait]
 pub trait StorageLayer: Send + Sync {
-    async fn health_check(&self) -> Result<(), String>;
+    async fn health_check(&self) -> bool;
 }
 
 impl MemoryStorage {
@@ -16,7 +16,7 @@ impl MemoryStorage {
 
 #[async_trait::async_trait]
 impl StorageLayer for MemoryStorage {
-    async fn health_check(&self) -> Result<(), String> {
-        Ok(())
+    async fn health_check(&self) -> bool {
+        true
     }
 }
