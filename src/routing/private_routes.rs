@@ -7,35 +7,35 @@ use axum::{
     response::IntoResponse,
     http::StatusCode,
 };
-use std::sync::Arc;
 
-use crate::storage::StorageLayer;
+use crate::app::AppState;
+
 
 // User
-async fn list_users(State(_storage): State<Arc<dyn StorageLayer>>) -> impl IntoResponse {
+async fn list_users(State(_app_state): State<AppState>) -> impl IntoResponse {
     (StatusCode::NOT_IMPLEMENTED, Json(ApiResponse::<()>::not_implemented()))
 }
 
-async fn get_user(State(_storage): State<Arc<dyn StorageLayer>>) -> impl IntoResponse {
+async fn get_user(State(_app_state): State<AppState>) -> impl IntoResponse {
     (StatusCode::NOT_IMPLEMENTED, Json(ApiResponse::<()>::not_implemented()))
 }
 
-async fn create_user(State(_storage): State<Arc<dyn StorageLayer>>) -> impl IntoResponse {
+async fn create_user(State(_app_state): State<AppState>) -> impl IntoResponse {
     (StatusCode::NOT_IMPLEMENTED, Json(ApiResponse::<()>::not_implemented()))
 }
 
-async fn update_user(State(_storage): State<Arc<dyn StorageLayer>>) -> impl IntoResponse {
+async fn update_user(State(_app_state): State<AppState>) -> impl IntoResponse {
     (StatusCode::NOT_IMPLEMENTED, Json(ApiResponse::<()>::not_implemented()))
 }
 
-async fn delete_user(State(_storage): State<Arc<dyn StorageLayer>>) -> impl IntoResponse {
+async fn delete_user(State(_app_state): State<AppState>) -> impl IntoResponse {
     (StatusCode::NOT_IMPLEMENTED, Json(ApiResponse::<()>::not_implemented()))   
 }
 
 
 // System Status
-async fn system_status(State(storage): State<Arc<dyn StorageLayer>>) -> impl IntoResponse {
-    let healthy = storage.health_check().await;
+async fn system_status(State(app_stae): State<AppState>) -> impl IntoResponse {
+    let healthy = app_stae.storage.health_check().await;
     if healthy {
         (StatusCode::OK, Json(ApiResponse::success("System operational")))
     } else {
@@ -45,7 +45,7 @@ async fn system_status(State(storage): State<Arc<dyn StorageLayer>>) -> impl Int
 
 
 // Router
-pub fn router() -> Router<Arc<dyn StorageLayer>> {
+pub fn router() -> Router<AppState> {
     Router::new()
         // User management > for admin
         .route("/users", get(list_users))

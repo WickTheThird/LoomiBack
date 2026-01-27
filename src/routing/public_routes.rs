@@ -8,19 +8,17 @@ use axum::{
     response::IntoResponse,
 };
 
-use std::sync::Arc;
-
-use crate::storage::StorageLayer;
+use crate::app::AppState;
 
 
-async fn health(State(storage): State<Arc<dyn StorageLayer>>) -> impl IntoResponse {
-    if storage.health_check().await {
+async fn health(State(app_state): State<AppState>) -> impl IntoResponse {
+    if app_state.storage.health_check().await {
         (StatusCode::OK, Json(HealthResponse { status: HealthStatus::Ok}))
     } else {
         (StatusCode::SERVICE_UNAVAILABLE, Json(HealthResponse { status: HealthStatus::Unavailable}) )
     }
 }
 
-pub fn router() -> Router<Arc<dyn StorageLayer>> {
+pub fn router() -> Router<AppState> {
     Router::new().route("/health", get(health))
 }
