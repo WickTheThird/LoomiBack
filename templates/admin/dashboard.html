@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block body %}
+<nav class="navbar">
+    <a href="/admin/dashboard" class="navbar-brand">Learner Admin</a>
+    <ul class="navbar-nav">
+        <li><a href="/admin/dashboard">Dashboard</a></li>
+        <li><a href="/admin/users">Users</a></li>
+    </ul>
+    <div class="navbar-user">
+        <span>{{ user_email }}</span>
+        <form method="POST" action="/admin/logout" style="display: inline;">
+            <button type="submit" class="btn btn-danger" style="padding: 0.5rem 1rem; font-size: 0.9rem;">Logout</button>
+        </form>
+    </div>
+</nav>
+
+<div class="container">
+    <h1 style="margin: 2rem 0;">Dashboard</h1>
+
+    <div class="grid grid-4">
+        <div class="card stat-card">
+            <div class="stat-value">{{ total_users }}</div>
+            <div class="stat-label">Total Users</div>
+        </div>
+        <div class="card stat-card">
+            <div class="stat-value">{{ active_users }}</div>
+            <div class="stat-label">Active Users</div>
+        </div>
+        <div class="card stat-card">
+            <div class="stat-value">{{ total_admins }}</div>
+            <div class="stat-label">Admins</div>
+        </div>
+        <div class="card stat-card">
+            <div class="stat-value" style="color: {% if system_healthy %}#28a745{% else %}#dc3545{% endif %};">
+                {% if system_healthy %}OK{% else %}ERROR{% endif %}
+            </div>
+            <div class="stat-label">System Status</div>
+        </div>
+    </div>
+
+    <div class="grid grid-2">
+        <div class="card">
+            <div class="card-header">Quick Actions</div>
+            <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                <a href="/admin/users" class="btn btn-primary">Manage Users</a>
+                <a href="/admin/system" class="btn btn-primary">System Settings</a>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">Your Account</div>
+            <p><strong>Email:</strong> {{ user_email }}</p>
+            <p><strong>Role:</strong> <span class="badge badge-info">{{ admin_role }}</span></p>
+            <p><strong>Account Level:</strong> <span class="badge badge-success">{{ account_level }}</span></p>
+        </div>
+    </div>
+</div>
+{% endblock %}

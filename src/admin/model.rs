@@ -7,7 +7,7 @@ pub struct Admin {
     pub id: Uuid,
     pub user_id: Uuid,
     pub role: AdminRole,
-    pub permisions: Vec<String>,
+    pub permissions: Vec<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub created_by: Option<Uuid>,
@@ -26,6 +26,6 @@ pub struct AdminProfile {
     pub id: Uuid,
     pub user: crate::users::model::UserProfile,
     pub role: AdminRole,
-    pub permisions: Vec<String>,
+    pub permissions: Vec<String>,
     pub created_at: DateTime<Utc>,
 }

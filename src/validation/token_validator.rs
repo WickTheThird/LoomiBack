@@ -1,23 +1,48 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::RwLock;
 use chrono::Utc;
 use uuid::Uuid;
 
 use super::model::{AuthToken, ValidationKey, TokenValidation, TokenType};
 
-
 pub struct ValidationStore {
     keys: RwLock<HashMap<Uuid, ValidationKey>>,
     tokens: RwLock<HashMap<String, AuthToken>>,
+    blacklisted_jtis: RwLock<HashSet<Uuid>>,
 }
 
+impl Default for ValidationStore {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl ValidationStore {
     pub fn new() -> Self {
         Self {
             keys: RwLock::new(HashMap::new()),
             tokens: RwLock::new(HashMap::new()),
+            blacklisted_jtis: RwLock::new(HashSet::new()),
         }
+    }
+
+    /// Add a JTI to the blacklist (for logout)
+    pub fn blacklist_jti(&self, jti: Uuid) {
+        let mut blacklist = self.blacklisted_jtis.write().unwrap();
+        blacklist.insert(jti);
+    }
+
+    /// Check if a JTI is blacklisted
+    pub fn is_jti_blacklisted(&self, jti: &Uuid) -> bool {
+        let blacklist = self.blacklisted_jtis.read().unwrap();
+        blacklist.contains(jti)
+    }
+
+    /// Clear old entries from blacklist (call periodically)
+    pub fn cleanup_blacklist(&self) {
+        // In a real implementation, you'd track expiry times
+        // For now, this is a no-op placeholder
+        // In production, use Redis with TTL or track expiry times
     }
 
     pub fn store_key(&self, key: ValidationKey) {

@@ -24,7 +24,7 @@ pub enum AccountLevel {
     Enterprise,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, sqlx::Type)]
 #[sqlx(type_name = "account_status", rename_all = "lowercase")]
 pub enum AccountStatus {
     Active,

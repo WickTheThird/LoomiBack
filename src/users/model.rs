@@ -50,3 +50,32 @@ pub struct UserLoginResponse {
     pub page: i32,
     pub per_page: i32,
 }
+
+// Conversions
+impl From<User> for UserProfile {
+    fn from(user: User) -> Self {
+        UserProfile {
+            id: user.id,
+            email: user.email,
+            username: user.username,
+            first_name: user.first_name,
+            last_name: user.last_name,
+            is_active: user.is_active,
+            created_at: user.created_at,
+        }
+    }
+}
+
+impl From<&User> for UserProfile {
+    fn from(user: &User) -> Self {
+        UserProfile {
+            id: user.id,
+            email: user.email.clone(),
+            username: user.username.clone(),
+            first_name: user.first_name.clone(),
+            last_name: user.last_name.clone(),
+            is_active: user.is_active,
+            created_at: user.created_at,
+        }
+    }
+}

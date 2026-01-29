@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block title %}Users{% endblock %}
+
+{% block body %}
+<nav class="navbar">
+    <a href="/admin/dashboard" class="navbar-brand">Learner Admin</a>
+    <ul class="navbar-nav">
+        <li><a href="/admin/dashboard">Dashboard</a></li>
+        <li><a href="/admin/users">Users</a></li>
+    </ul>
+    <div class="navbar-user">
+        <span>{{ user_email }}</span>
+        <form method="POST" action="/admin/logout" style="display: inline;">
+            <button type="submit" class="btn btn-danger" style="padding: 0.5rem 1rem; font-size: 0.9rem;">Logout</button>
+        </form>
+    </div>
+</nav>
+
+<div class="container">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin: 2rem 0;">
+        <h1>Users</h1>
+        <a href="/admin/users/new" class="btn btn-primary">Add User</a>
+    </div>
+
+    {% if let Some(msg) = message %}
+    <div class="alert alert-success">{{ msg }}</div>
+    {% endif %}
+
+    <div class="card">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Username</th>
+                    <th>Email</th>
+                    <th>Name</th>
+                    <th>Status</th>
+                    <th>Account Level</th>
+                    <th>Created</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr>
+                    <td>{{ user.username }}</td>
+                    <td>{{ user.email }}</td>
+                    <td>{{ user.first_name }} {{ user.last_name }}</td>
+                    <td>
+                        {% if user.is_active %}
+                        <span class="badge badge-success">Active</span>
+                        {% else %}
+                        <span class="badge badge-danger">Inactive</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="badge badge-info">{{ user.account_level }}</span>
+                    </td>
+                    <td>{{ user.created_at }}</td>
+                    <td>
+                        <a href="/admin/users/{{ user.id }}" class="btn btn-primary" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">Edit</a>
+                    </td>
+                </tr>
+                {% endfor %}
+
+                {% if users.is_empty() %}
+                <tr>
+                    <td colspan="7" style="text-align: center; color: #666; padding: 2rem;">
+                        No users found
+                    </td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if total_pages > 1 %}
+    <div style="display: flex; justify-content: center; gap: 0.5rem; margin-top: 1rem;">
+        {% if current_page > 1 %}
+        <a href="/admin/users?page={{ current_page - 1 }}" class="btn btn-primary">Previous</a>
+        {% endif %}
+
+        <span style="padding: 0.75rem;">Page {{ current_page }} of {{ total_pages }}</span>
+
+        {% if current_page < total_pages %}
+        <a href="/admin/users?page={{ current_page + 1 }}" class="btn btn-primary">Next</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
