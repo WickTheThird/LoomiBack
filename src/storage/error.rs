@@ -6,6 +6,7 @@ pub enum DbError {
     Duplicate(String),
     Connection(String),
     Query(String),
+    Migration(String),
     Other(String),
 }
 
@@ -16,6 +17,7 @@ impl fmt::Display for DbError {
             DbError::Duplicate(field) => write!(f, "Duplicate value for field: {}", field),
             DbError::Connection(msg) => write!(f, "Database connection error: {}", msg),
             DbError::Query(msg) => write!(f, "Query error: {}", msg),
+            DbError::Migration(msg) => write!(f, "Migration error: {}", msg),
             DbError::Other(msg) => write!(f, "Database error: {}", msg),
         }
     }

@@ -11,7 +11,6 @@ use crate::auth::model::{UserAccount, AccountLevel, AccountStatus};
 use crate::admin::model::{Admin, AdminRole};
 use crate::validation::model::AuthToken;
 
-/// In-memory storage for development and testing
 pub struct MemoryStorage {
     users: RwLock<HashMap<Uuid, User>>,
     accounts: RwLock<HashMap<Uuid, UserAccount>>,
@@ -29,14 +28,12 @@ impl MemoryStorage {
         }
     }
 
-    /// Create a memory storage with a default admin user for testing
     pub fn with_default_admin(email: &str, password_hash: &str) -> Self {
         let storage = Self::new();
 
         let user_id = Uuid::new_v4();
         let now = Utc::now();
 
-        // Create user
         let user = User {
             id: user_id,
             email: email.to_string(),
@@ -51,7 +48,6 @@ impl MemoryStorage {
         };
         storage.users.write().unwrap().insert(user_id, user);
 
-        // Create account
         let account = UserAccount {
             id: Uuid::new_v4(),
             user_id,
@@ -73,7 +69,6 @@ impl MemoryStorage {
         };
         storage.accounts.write().unwrap().insert(user_id, account);
 
-        // Create admin
         let admin = Admin {
             id: Uuid::new_v4(),
             user_id,
@@ -101,7 +96,6 @@ impl StorageLayer for MemoryStorage {
         true
     }
 
-    // Users
     async fn get_user_by_email(&self, email: &str) -> Result<Option<User>, DbError> {
         let users = self.users.read().unwrap();
         Ok(users.values().find(|u| u.email == email).cloned())
@@ -120,12 +114,10 @@ impl StorageLayer for MemoryStorage {
     async fn create_user(&self, req: &CreateUserRequest, password_hash: &str) -> Result<User, DbError> {
         let mut users = self.users.write().unwrap();
 
-        // Check for duplicate email
         if users.values().any(|u| u.email == req.email) {
             return Err(DbError::Duplicate("email".to_string()));
         }
 
-        // Check for duplicate username
         if users.values().any(|u| u.username == req.username) {
             return Err(DbError::Duplicate("username".to_string()));
         }
@@ -157,7 +149,6 @@ impl StorageLayer for MemoryStorage {
         Ok(())
     }
 
-    // User Accounts
     async fn get_account_by_user_id(&self, user_id: Uuid) -> Result<Option<UserAccount>, DbError> {
         let accounts = self.accounts.read().unwrap();
         Ok(accounts.get(&user_id).cloned())
@@ -184,7 +175,6 @@ impl StorageLayer for MemoryStorage {
         Ok(account)
     }
 
-    // Admins
     async fn get_admin_by_user_id(&self, user_id: Uuid) -> Result<Option<Admin>, DbError> {
         let admins = self.admins.read().unwrap();
         Ok(admins.get(&user_id).cloned())
@@ -195,7 +185,6 @@ impl StorageLayer for MemoryStorage {
         Ok(admins.contains_key(&user_id))
     }
 
-    // Auth Tokens
     async fn store_token(&self, token: &AuthToken) -> Result<(), DbError> {
         let mut tokens = self.tokens.write().unwrap();
         tokens.insert(token.token_hash.clone(), token.clone());

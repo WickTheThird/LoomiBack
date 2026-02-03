@@ -26,23 +26,17 @@ impl ValidationStore {
         }
     }
 
-    /// Add a JTI to the blacklist (for logout)
     pub fn blacklist_jti(&self, jti: Uuid) {
         let mut blacklist = self.blacklisted_jtis.write().unwrap();
         blacklist.insert(jti);
     }
 
-    /// Check if a JTI is blacklisted
     pub fn is_jti_blacklisted(&self, jti: &Uuid) -> bool {
         let blacklist = self.blacklisted_jtis.read().unwrap();
         blacklist.contains(jti)
     }
 
-    /// Clear old entries from blacklist (call periodically)
     pub fn cleanup_blacklist(&self) {
-        // In a real implementation, you'd track expiry times
-        // For now, this is a no-op placeholder
-        // In production, use Redis with TTL or track expiry times
     }
 
     pub fn store_key(&self, key: ValidationKey) {
@@ -142,7 +136,6 @@ impl ValidationStore {
     }
 }
 
-// Some utils
 pub struct JwtValidator {
     secret: String,
 }

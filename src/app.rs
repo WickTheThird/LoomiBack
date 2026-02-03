@@ -9,6 +9,7 @@ use crate::auth::TokenService;
 use crate::admin::handlers as admin_handlers;
 use crate::auth::r#in as auth_in;
 use crate::auth::out as auth_out;
+use crate::auth::new as auth_new;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -51,6 +52,7 @@ pub async fn create_app_with_config(storage: Arc<dyn StorageLayer>, config: AppC
         .route("/users", get(admin_handlers::users_list));
 
     let auth_routes = Router::new()
+        .route("/register", post(auth_new::register))
         .route("/login", post(auth_in::user_login))
         .route("/admin/login", post(auth_in::admin_login))
         .route("/logout", post(auth_out::logout))

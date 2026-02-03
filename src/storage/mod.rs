@@ -4,6 +4,7 @@ pub mod error;
 
 pub use error::DbError;
 pub use memory::MemoryStorage;
+pub use postgres::PostgresStorage;
 
 use async_trait::async_trait;
 use uuid::Uuid;

@@ -58,7 +58,6 @@ impl TokenService {
         }
     }
 
-    /// Generate tokens for a regular user
     pub fn generate_user_tokens(
         &self,
         user: &User,
@@ -67,7 +66,6 @@ impl TokenService {
         self.generate_tokens_internal(user, account, false, None)
     }
 
-    /// Generate tokens for an admin user
     pub fn generate_admin_tokens(
         &self,
         user: &User,
@@ -88,7 +86,6 @@ impl TokenService {
         let access_exp = now + self.access_token_ttl;
         let refresh_exp = now + self.refresh_token_ttl;
 
-        // Generate access token
         let access_jti = Uuid::new_v4();
         let access_claims = Claims {
             sub: user.id,
@@ -111,7 +108,6 @@ impl TokenService {
         )
         .map_err(|e| TokenError::EncodingFailed(e.to_string()))?;
 
-        // Generate refresh token (simpler claims, just user id and jti)
         let refresh_jti = Uuid::new_v4();
         let refresh_claims = RefreshClaims {
             sub: user.id,
@@ -136,7 +132,6 @@ impl TokenService {
         })
     }
 
-    /// Verify and decode an access token
     pub fn verify_access_token(&self, token: &str) -> Result<Claims, TokenError> {
         let key = DecodingKey::from_secret(self.jwt_secret.as_bytes());
         let validation = Validation::new(Algorithm::HS256);
@@ -152,7 +147,6 @@ impl TokenService {
             })
     }
 
-    /// Verify and decode a refresh token
     pub fn verify_refresh_token(&self, token: &str) -> Result<RefreshClaims, TokenError> {
         let key = DecodingKey::from_secret(self.jwt_secret.as_bytes());
         let validation = Validation::new(Algorithm::HS256);
@@ -168,7 +162,6 @@ impl TokenService {
             })
     }
 
-    /// Create an AuthToken record for storing in the database
     pub fn create_token_record(
         &self,
         user_id: Uuid,
@@ -203,7 +196,6 @@ impl TokenService {
         }
     }
 
-    /// Extract bearer token from Authorization header
     pub fn extract_bearer_token(auth_header: &str) -> Option<&str> {
         if auth_header.starts_with("Bearer ") {
             Some(&auth_header[7..])
@@ -213,7 +205,6 @@ impl TokenService {
     }
 }
 
-/// Simplified claims for refresh tokens
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct RefreshClaims {
     pub sub: Uuid,
@@ -223,7 +214,6 @@ pub struct RefreshClaims {
     pub exp: usize,
 }
 
-/// Hash a token for storage (we don't store raw tokens)
 fn hash_token(token: &str) -> String {
     use std::collections::hash_map::DefaultHasher;
     use std::hash::{Hash, Hasher};

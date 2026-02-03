@@ -14,22 +14,33 @@ mod utils;
 mod routing;
 mod models;
 
-use std::net::SocketAddr;
+use std::env;
 use std::sync::Arc;
 
-use storage::MemoryStorage;
+use config::Config;
+use storage::{MemoryStorage, PostgresStorage, StorageLayer};
 
 #[tokio::main]
 async fn main() {
-    // Create storage with a default admin for testing
-    // Password: "admin123" - bcrypt hash
-    let password_hash = bcrypt::hash("admin123", bcrypt::DEFAULT_COST)
-        .expect("Failed to hash password");
+    dotenvy::dotenv().ok();
+    let config = Config::from_env();
 
-    let storage = Arc::new(MemoryStorage::with_default_admin(
-        "admin@example.com",
-        &password_hash,
-    ));
+    let storage: Arc<dyn StorageLayer> = if env::var("DATABASE_URL").is_ok() {
+        match setup_postgres(&config).await {
+            Ok(pg) => {
+                println!("Connected to PostgreSQL database");
+                Arc::new(pg)
+            }
+            Err(e) => {
+                eprintln!("Failed to connect to database: {}", e);
+                eprintln!("Falling back to in-memory storage");
+                create_memory_storage()
+            }
+        }
+    } else {
+        println!("No DATABASE_URL set, using in-memory storage");
+        create_memory_storage()
+    };
 
     println!("===========================================");
     println!("  Default admin credentials for testing:");
@@ -38,16 +49,39 @@ async fn main() {
     println!("===========================================");
 
     let app = app::create_app(storage).await;
-    let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
+    let addr = config.server_addr();
 
     println!("Server running at http://{}", addr);
     println!("Admin panel: http://{}/admin/login", addr);
 
-    let listener = tokio::net::TcpListener::bind(addr)
+    let listener = tokio::net::TcpListener::bind(&addr)
         .await
         .expect("Failed to bind to address");
 
     axum::serve(listener, app)
         .await
         .expect("Failed to start server");
+}
+
+async fn setup_postgres(config: &Config) -> Result<PostgresStorage, storage::DbError> {
+    let pg = PostgresStorage::from_url(&config.database_url).await?;
+    println!("Running database migrations...");
+    pg.run_migrations().await?;
+    println!("Migrations completed successfully");
+
+    let password_hash = bcrypt::hash("admin123", bcrypt::DEFAULT_COST)
+        .expect("Failed to hash password");
+    pg.seed_admin("admin@example.com", &password_hash).await?;
+
+    Ok(pg)
+}
+
+fn create_memory_storage() -> Arc<dyn StorageLayer> {
+    let password_hash = bcrypt::hash("admin123", bcrypt::DEFAULT_COST)
+        .expect("Failed to hash password");
+
+    Arc::new(MemoryStorage::with_default_admin(
+        "admin@example.com",
+        &password_hash,
+    ))
 }

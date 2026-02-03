@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use sqlx::PgPool;
+use sqlx::migrate::Migrator;
 use uuid::Uuid;
 
 use super::{DbError, StorageLayer};
@@ -7,6 +8,8 @@ use crate::users::model::{User, CreateUserRequest};
 use crate::auth::model::{UserAccount, AccountLevel, AccountStatus};
 use crate::admin::model::Admin;
 use crate::validation::model::AuthToken;
+
+static MIGRATOR: Migrator = sqlx::migrate!();
 
 pub struct PostgresStorage {
     pool: PgPool,
@@ -23,6 +26,67 @@ impl PostgresStorage {
             .map_err(|e| DbError::Connection(e.to_string()))?;
         Ok(Self { pool })
     }
+
+    pub async fn run_migrations(&self) -> Result<(), DbError> {
+        MIGRATOR
+            .run(&self.pool)
+            .await
+            .map_err(|e| DbError::Migration(e.to_string()))?;
+        Ok(())
+    }
+
+    pub fn pool(&self) -> &PgPool {
+        &self.pool
+    }
+
+    pub async fn seed_admin(&self, email: &str, password_hash: &str) -> Result<(), DbError> {
+        let existing = self.get_user_by_email(email).await?;
+        if existing.is_some() {
+            return Ok(());
+        }
+
+        let user_id = Uuid::new_v4();
+
+        sqlx::query(
+            "INSERT INTO users (id, email, password_hash, username, first_name, last_name, is_active)
+             VALUES ($1, $2, $3, $4, $5, $6, true)"
+        )
+        .bind(user_id)
+        .bind(email)
+        .bind(password_hash)
+        .bind("admin")
+        .bind("Admin")
+        .bind("User")
+        .execute(&self.pool)
+        .await?;
+
+        sqlx::query(
+            "INSERT INTO user_accounts (user_id, account_level, account_status, capabilities)
+             VALUES ($1, 'enterprise', 'active', $2)"
+        )
+        .bind(user_id)
+        .bind(&vec![
+            "create_website",
+            "manage_components",
+            "send_emails",
+            "access_analytics",
+            "api_access",
+            "priority_support",
+        ])
+        .execute(&self.pool)
+        .await?;
+
+        sqlx::query(
+            "INSERT INTO admins (user_id, role, permissions)
+             VALUES ($1, 'superadmin', $2)"
+        )
+        .bind(user_id)
+        .bind(&vec!["*"])
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
 }
 
 #[async_trait]
@@ -34,7 +98,6 @@ impl StorageLayer for PostgresStorage {
             .is_ok()
     }
 
-    // Users
     async fn get_user_by_email(&self, email: &str) -> Result<Option<User>, DbError> {
         let user = sqlx::query_as::<_, User>(
             "SELECT id, email, password_hash, username, first_name, last_name,
@@ -100,7 +163,6 @@ impl StorageLayer for PostgresStorage {
         Ok(())
     }
 
-    // User Accounts
     async fn get_account_by_user_id(&self, user_id: Uuid) -> Result<Option<UserAccount>, DbError> {
         let account = sqlx::query_as::<_, UserAccount>(
             "SELECT id, user_id, account_level, account_status, capabilities,
@@ -131,7 +193,6 @@ impl StorageLayer for PostgresStorage {
         Ok(account)
     }
 
-    // Admins
     async fn get_admin_by_user_id(&self, user_id: Uuid) -> Result<Option<Admin>, DbError> {
         let admin = sqlx::query_as::<_, Admin>(
             "SELECT id, user_id, role, permissions, created_at, updated_at, created_by
@@ -155,7 +216,6 @@ impl StorageLayer for PostgresStorage {
         Ok(result.is_some())
     }
 
-    // Auth Tokens
     async fn store_token(&self, token: &AuthToken) -> Result<(), DbError> {
         sqlx::query(
             "INSERT INTO auth_tokens (id, user_id, token_hash, token_type, expires_at, device_info)

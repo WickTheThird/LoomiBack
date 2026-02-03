@@ -76,11 +76,12 @@ pub struct AccountInfo {
 }
 
 
-// JWT Stuff
+use crate::admin::model::AdminRole;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Claims {
-    pub sub: Uuid,           // User ID
-    pub jti: Uuid,           // JWT ID for revocation tracking
+    pub sub: Uuid,
+    pub jti: Uuid,
     pub email: String,
     pub account_level: AccountLevel,
     pub account_status: AccountStatus,
@@ -91,9 +92,6 @@ pub struct Claims {
     pub iat: usize,
     pub exp: usize,
 }
-
-// Need to import AdminRole
-use crate::admin::model::AdminRole;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum UserRole {

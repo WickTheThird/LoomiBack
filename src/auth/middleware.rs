@@ -47,91 +47,75 @@ impl AuthMiddlewareError {
     }
 }
 
-/// Extension to store authenticated user claims in request
 #[derive(Clone)]
 pub struct AuthenticatedUser {
     pub claims: Claims,
 }
 
-/// Middleware that requires a valid JWT token
 pub async fn require_auth(
     State(state): State<AppState>,
     mut request: Request,
     next: Next,
 ) -> Result<Response, (StatusCode, Json<AuthMiddlewareError>)> {
-    // Extract Authorization header
     let auth_header = request
         .headers()
         .get("Authorization")
         .and_then(|h| h.to_str().ok())
         .ok_or_else(|| (StatusCode::UNAUTHORIZED, Json(AuthMiddlewareError::missing_token())))?;
 
-    // Extract bearer token
     let token = TokenService::extract_bearer_token(auth_header)
         .ok_or_else(|| (StatusCode::UNAUTHORIZED, Json(AuthMiddlewareError::missing_token())))?;
 
-    // Verify token
     let claims = state
         .token_service
         .verify_access_token(token)
         .map_err(|_| (StatusCode::UNAUTHORIZED, Json(AuthMiddlewareError::invalid_token())))?;
 
-    // Check if token is blacklisted
     if state.validation.is_jti_blacklisted(&claims.jti) {
         return Err((StatusCode::UNAUTHORIZED, Json(AuthMiddlewareError::token_revoked())));
     }
 
-    // Store claims in request extensions for handlers to access
     request.extensions_mut().insert(AuthenticatedUser { claims });
 
     Ok(next.run(request).await)
 }
 
-/// Middleware that requires admin access
 pub async fn require_admin(
     State(state): State<AppState>,
     mut request: Request,
     next: Next,
 ) -> Result<Response, (StatusCode, Json<AuthMiddlewareError>)> {
-    // Extract Authorization header
     let auth_header = request
         .headers()
         .get("Authorization")
         .and_then(|h| h.to_str().ok())
         .ok_or_else(|| (StatusCode::UNAUTHORIZED, Json(AuthMiddlewareError::missing_token())))?;
 
-    // Extract bearer token
     let token = TokenService::extract_bearer_token(auth_header)
         .ok_or_else(|| (StatusCode::UNAUTHORIZED, Json(AuthMiddlewareError::missing_token())))?;
 
-    // Verify token
     let claims = state
         .token_service
         .verify_access_token(token)
         .map_err(|_| (StatusCode::UNAUTHORIZED, Json(AuthMiddlewareError::invalid_token())))?;
 
-    // Check if token is blacklisted
     if state.validation.is_jti_blacklisted(&claims.jti) {
         return Err((StatusCode::UNAUTHORIZED, Json(AuthMiddlewareError::token_revoked())));
     }
 
-    // Check if user is admin
     if !claims.is_admin {
         return Err((StatusCode::FORBIDDEN, Json(AuthMiddlewareError::not_admin())));
     }
 
-    // Store claims in request extensions
     request.extensions_mut().insert(AuthenticatedUser { claims });
 
     Ok(next.run(request).await)
 }
 
-/// Helper to extract authenticated user from request extensions
 pub fn get_authenticated_user(request: &Request) -> Option<&AuthenticatedUser> {
     request.extensions().get::<AuthenticatedUser>()
 }
 
-/// Middleware that checks for a specific capability
 pub fn require_capability(
     capability: &'static str,
 ) -> impl Fn(
@@ -143,29 +127,24 @@ pub fn require_capability(
        + Send {
     move |State(state): State<AppState>, mut request: Request, next: Next| {
         Box::pin(async move {
-            // Extract Authorization header
             let auth_header = request
                 .headers()
                 .get("Authorization")
                 .and_then(|h| h.to_str().ok())
                 .ok_or_else(|| (StatusCode::UNAUTHORIZED, Json(AuthMiddlewareError::missing_token())))?;
 
-            // Extract bearer token
             let token = TokenService::extract_bearer_token(auth_header)
                 .ok_or_else(|| (StatusCode::UNAUTHORIZED, Json(AuthMiddlewareError::missing_token())))?;
 
-            // Verify token
             let claims = state
                 .token_service
                 .verify_access_token(token)
                 .map_err(|_| (StatusCode::UNAUTHORIZED, Json(AuthMiddlewareError::invalid_token())))?;
 
-            // Check if token is blacklisted
             if state.validation.is_jti_blacklisted(&claims.jti) {
                 return Err((StatusCode::UNAUTHORIZED, Json(AuthMiddlewareError::token_revoked())));
             }
 
-            // Check if user has the required capability
             if !claims.capabilities.contains(&capability.to_string()) {
                 return Err((
                     StatusCode::FORBIDDEN,
@@ -176,7 +155,6 @@ pub fn require_capability(
                 ));
             }
 
-            // Store claims in request extensions
             request.extensions_mut().insert(AuthenticatedUser { claims });
 
             Ok(next.run(request).await)

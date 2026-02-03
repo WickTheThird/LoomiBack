@@ -49,13 +49,10 @@ impl AuthError {
     }
 }
 
-/// Admin login endpoint
-/// POST /auth/admin/login
 pub async fn admin_login(
     State(state): State<AppState>,
     Json(req): Json<AdminLoginRequest>,
 ) -> Result<Json<LoginResponse>, (StatusCode, Json<AuthError>)> {
-    // 1. Find user by email
     let user = state
         .storage
         .get_user_by_email(&req.email)
@@ -63,7 +60,6 @@ pub async fn admin_login(
         .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, Json(AuthError::internal_error())))?
         .ok_or_else(|| (StatusCode::UNAUTHORIZED, Json(AuthError::invalid_credentials())))?;
 
-    // 2. Verify password
     let password_valid = bcrypt::verify(&req.password, &user.password_hash)
         .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, Json(AuthError::internal_error())))?;
 
@@ -71,12 +67,10 @@ pub async fn admin_login(
         return Err((StatusCode::UNAUTHORIZED, Json(AuthError::invalid_credentials())));
     }
 
-    // 3. Check if user is active
     if !user.is_active {
         return Err((StatusCode::FORBIDDEN, Json(AuthError::account_inactive())));
     }
 
-    // 4. Check if user is admin
     let admin = state
         .storage
         .get_admin_by_user_id(user.id)
@@ -84,7 +78,6 @@ pub async fn admin_login(
         .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, Json(AuthError::internal_error())))?
         .ok_or_else(|| (StatusCode::FORBIDDEN, Json(AuthError::not_admin())))?;
 
-    // 5. Get user account
     let account = state
         .storage
         .get_account_by_user_id(user.id)
@@ -92,32 +85,26 @@ pub async fn admin_login(
         .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, Json(AuthError::internal_error())))?
         .ok_or_else(|| (StatusCode::INTERNAL_SERVER_ERROR, Json(AuthError::internal_error())))?;
 
-    // 6. Check account status
     if account.account_status != AccountStatus::Active {
         return Err((StatusCode::FORBIDDEN, Json(AuthError::account_inactive())));
     }
 
-    // 7. Generate tokens
     let token_pair = state
         .token_service
         .generate_admin_tokens(&user, &account, &admin)
         .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, Json(AuthError::internal_error())))?;
 
-    // 8. Store refresh token in database
     let refresh_record = state.token_service.create_token_record(
         user.id,
         &token_pair.refresh_token,
-        true, // is_admin
-        true, // is_refresh
+        true,
+        true,
         req.device_info,
     );
 
     let _ = state.storage.store_token(&refresh_record).await;
-
-    // 9. Update last login
     let _ = state.storage.update_user_last_login(user.id).await;
 
-    // 10. Build response
     let user_profile = UserProfile::from(&user);
     let all_capabilities = get_all_capabilities(&account);
 
@@ -134,13 +121,10 @@ pub async fn admin_login(
     }))
 }
 
-/// Regular user login endpoint
-/// POST /auth/login
 pub async fn user_login(
     State(state): State<AppState>,
     Json(req): Json<LoginRequest>,
 ) -> Result<Json<LoginResponse>, (StatusCode, Json<AuthError>)> {
-    // 1. Find user by email
     let user = state
         .storage
         .get_user_by_email(&req.email)
@@ -148,7 +132,6 @@ pub async fn user_login(
         .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, Json(AuthError::internal_error())))?
         .ok_or_else(|| (StatusCode::UNAUTHORIZED, Json(AuthError::invalid_credentials())))?;
 
-    // 2. Verify password
     let password_valid = bcrypt::verify(&req.password, &user.password_hash)
         .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, Json(AuthError::internal_error())))?;
 
@@ -156,12 +139,10 @@ pub async fn user_login(
         return Err((StatusCode::UNAUTHORIZED, Json(AuthError::invalid_credentials())));
     }
 
-    // 3. Check if user is active
     if !user.is_active {
         return Err((StatusCode::FORBIDDEN, Json(AuthError::account_inactive())));
     }
 
-    // 4. Get user account
     let account = state
         .storage
         .get_account_by_user_id(user.id)
@@ -169,32 +150,26 @@ pub async fn user_login(
         .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, Json(AuthError::internal_error())))?
         .ok_or_else(|| (StatusCode::INTERNAL_SERVER_ERROR, Json(AuthError::internal_error())))?;
 
-    // 5. Check account status
     if account.account_status != AccountStatus::Active {
         return Err((StatusCode::FORBIDDEN, Json(AuthError::account_inactive())));
     }
 
-    // 6. Generate tokens
     let token_pair = state
         .token_service
         .generate_user_tokens(&user, &account)
         .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, Json(AuthError::internal_error())))?;
 
-    // 7. Store refresh token
     let refresh_record = state.token_service.create_token_record(
         user.id,
         &token_pair.refresh_token,
-        false, // is_admin
-        true,  // is_refresh
+        false,
+        true,
         None,
     );
 
     let _ = state.storage.store_token(&refresh_record).await;
-
-    // 8. Update last login
     let _ = state.storage.update_user_last_login(user.id).await;
 
-    // 9. Build response
     let user_profile = UserProfile::from(&user);
     let all_capabilities = get_all_capabilities(&account);
 
